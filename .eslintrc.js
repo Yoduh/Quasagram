@@ -56,7 +56,9 @@ module.exports = {
   // add your custom rules here
   rules: {
     'prefer-promise-reject-errors': 'off',
-    'prettier/prettier': ['error'],
+    'prettier/prettier': ['error', {
+      'endOfOline':'auto'
+    }],
     'arrow-parens': 0,
 
     // allow debugger during development only
