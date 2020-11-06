@@ -26,10 +26,54 @@
         ></q-btn>
       </q-toolbar>
     </q-header>
-    <q-footer class="bg-white small-screen-only" bordered>
+    <q-footer class="bg-white" bordered>
+      <transition
+        appear
+        enter-active-class="animated fadeIn"
+        leave-active-class="animated fadeOut"
+      >
+        <div v-if="showAppInstallBanner" class="banner-container bg-primary">
+          <div class="constrain">
+            <q-banner inline-actions dense class="bg-primary text-white">
+              <template v-slot:avatar>
+                <q-avatar
+                  color="white"
+                  text-color="grey-10"
+                  font-size="22px"
+                  icon="eva-camera-outline"
+                ></q-avatar>
+              </template>
+              <b>Install Quasagram?</b>
+              <template v-slot:action>
+                <q-btn
+                  class="q-px-sm"
+                  dense
+                  flat
+                  label="Yes"
+                  @click="installApp"
+                />
+                <q-btn
+                  class="q-px-sm"
+                  dense
+                  flat
+                  label="Later"
+                  @click="showAppInstallBanner = false"
+                />
+                <q-btn
+                  class="q-px-sm"
+                  dense
+                  flat
+                  label="Never"
+                  @click="neverShowAppInstallBanner"
+                />
+              </template>
+            </q-banner>
+          </div>
+        </div>
+      </transition>
       <q-toolbar-title>
         <q-tabs
-          class="text-grey-10"
+          class="text-grey-10 small-screen-only"
           active-color="primary"
           indicator-color="transparent"
         >
@@ -48,7 +92,55 @@
 export default {
   name: "MainLayout",
   data() {
-    return {};
+    return {
+      showAppInstallBanner: false,
+      deferredPrompt: null
+    };
+  },
+  methods: {
+    installApp() {
+      // Hide banner
+      this.showAppInstallBanner = false;
+      // Show the install prompt
+      this.deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      this.deferredPrompt.userChoice.then(choiceResult => {
+        if (choiceResult.outcome === "accepted") {
+          console.log("User accepted the install prompt");
+          this.neverShowAppInstallBanner();
+        } else {
+          console.log("User dismissed the install prompt");
+        }
+      });
+    },
+    neverShowAppInstallBanner() {
+      this.showAppInstallBanner = false;
+      window.localStorage.setItem("neverShowAppInstallBanner", true);
+    }
+  },
+  async mounted() {
+    if ("storage" in navigator && "estimate" in navigator.storage) {
+      const { usage, quota } = await navigator.storage.estimate();
+      const percentUsed = Math.round((usage / quota) * 100);
+      const usageInMib = Math.round(usage / (1024 * 1024));
+      const quotaInMib = Math.round(quota / (1024 * 1024));
+
+      const details = `${usageInMib} out of ${quotaInMib} MiB used (${percentUsed}%)`;
+      console.log("deets", details);
+    }
+    const hideBanner = window.localStorage.getItem("neverShowAppInstallBanner");
+    if (!hideBanner) {
+      window.addEventListener("beforeinstallprompt", e => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        this.deferredPrompt = e;
+        // Update UI notify the user they can install the PWA
+        setTimeout(() => {
+          this.showAppInstallBanner = true;
+        }, 2000);
+      });
+    }
   }
 };
 </script>
